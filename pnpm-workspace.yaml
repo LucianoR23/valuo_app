@@ -13,13 +13,15 @@ minimumReleaseAgeExclude:
   - source-map-js@1.2.2
 # Security overrides (plan 0.19): patched versions of build-time transitive
 # deps whose parents (next/styled-jsx, @serwist/build) pin vulnerable ones.
-# Same major only. Remove each once its parent ships the fix.
-# Accepted, with no same-major fix (reviewed 2026-11-08): glob 13 and
-# minimatch 10 under @serwist/build (moderate; build time only, globs our own
-# files) and deepmerge 4.3.1 under the shadcn CLI (low; the patched 4.3.2 is
-# not published). Revisit when Serwist or shadcn release.
+# Same major only, except glob below. Remove each once its parent ships the fix.
+# glob 14 (2026-11-14): the advisories on glob 13 and minimatch 10 under
+# @serwist/build are fixed only in glob >=14.0.2; Serwist 9.5.13 only calls
+# globSync, unchanged in 14, and the built precache list was checked equal.
+# Accepted (reviewed 2026-11-08): deepmerge 4.3.1 under the shadcn CLI (low;
+# the patched 4.3.2 is not published). Revisit when shadcn releases.
 overrides:
   browserslist@<4.28.7: ^4.28.7
   baseline-browser-mapping@<2.11.0: ^2.11.0
   "@babel/core@<7.29.1": ^7.29.1
   zod@<4.6.6: ^4.6.6
+  glob@<14.0.2: 14.0.6
