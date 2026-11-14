@@ -4,6 +4,10 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 3.5 parked: Gastos por mail removed from the app
+- Decided with the user (2026-11-14): setting up Gmail forwarding (desktop settings, confirmation code, filter) is too much for most people, and few banks mail every purchase. Sharing a screenshot (3.4 + 3.3) and the Telegram bot (3.6) cover those cases.
+- Reverts the app part of 3.5 (#87): the `/gastos-por-mail` screen, its Más item, the Inicio card, `?mail=` in Cargar gasto, the inbound hooks and mutations, and their baselines. The API and the Cloudflare Worker stay in `valuo_api`, off (no `INBOUND_*` set anywhere). Git history keeps this code to bring it back.
+
 ### Dependency watch: Serwist / glob
 - `pnpm audit` flagged glob 13 and minimatch 10 under `@serwist/build` (moderate, build time only). Serwist 9.5.14 is not out and the advisory fixes glob only from 14.0.2, so a pnpm override pins `glob@<14.0.2` to 14.0.6 (approved by the user; the one cross-major override). Serwist only calls `globSync`, unchanged in 14; the built service worker precaches the same 137 static files and `/offline`. `pnpm audit --prod` is clean. Remove the override once Serwist depends on glob 14.
 

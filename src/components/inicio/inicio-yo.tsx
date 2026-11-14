@@ -11,7 +11,6 @@ import { reportCurrency } from "@/lib/fx";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { InstallPrompt } from "@/components/install-prompt";
 import { PendingDraftsCard } from "@/components/pending-drafts-card";
-import { InboundPendingCard } from "@/components/inbound-pending-card";
 import { PushProvider } from "@/components/push-provider";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,7 +65,6 @@ export function InicioYo() {
         <CommittedWidget />
         <CardsDue />
         <LatestInsight />
-        <InboundPendingCard className="md:col-span-full" />
         <div className="md:col-span-full">
           <PendingDraftsCard />
         </div>
