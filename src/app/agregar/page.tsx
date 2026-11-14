@@ -48,10 +48,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             </div>
           }
         />
-        {/* Opened from the Share Target (plan 3.4) or Gastos por mail (3.5). */}
-        <ExpenseForm initial={initial} fromShare={params.recibido === "1"}
-          fromMail={typeof params.mail === "string" && /^[0-9a-f-]{36}$/i.test(params.mail) ? params.mail : undefined}
-        />
+        {/* Opened from the Share Target (plan 3.4). */}
+        <ExpenseForm initial={initial} fromShare={params.recibido === "1"} />
       </div>
     </AppShell>
   );
