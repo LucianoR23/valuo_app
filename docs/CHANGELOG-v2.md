@@ -4,6 +4,9 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### Dependency watch: Serwist / glob
+- `pnpm audit` flagged glob 13 and minimatch 10 under `@serwist/build` (moderate, build time only). Serwist 9.5.14 is not out and the advisory fixes glob only from 14.0.2, so a pnpm override pins `glob@<14.0.2` to 14.0.6 (approved by the user; the one cross-major override). Serwist only calls `globSync`, unchanged in 14; the built service worker precaches the same 137 static files and `/offline`. `pnpm audit --prod` is clean. Remove the override once Serwist depends on glob 14.
+
 ### 3.5 (app part): Gastos por mail
 - New screen `/gastos-por-mail` in Más › Tu plata (decided with the user): the person's forwarding address with a copy button, Gmail's forwarding confirmation code as soon as it arrives (the list refreshes every 15 s there), a step-by-step Gmail setup with the filter text to paste, and the mails waiting to be loaded.
 - Each open mail shows the sentence the API wrote ("Carrefour 15430,50 mercado pago ayer") with «Cargar» and «Descartar». A mail forwarded from another address asks «¿Es tuyo?» first.
