@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MenuGroup, MenuRow } from "@/components/ui/menu-list";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAI } from "@/lib/api/hooks";
+import { resumeUserAI } from "@/lib/api/mutations";
+import { confirm } from "@/lib/confirm";
+import { toast, toastError } from "@/lib/toast";
 
 const num = new Intl.NumberFormat("es-AR");
 const usdFmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 4 });
@@ -47,7 +52,7 @@ function Stat({ label, value, hint, children }: { label: string; value: string; 
  * sent to the AI.
  */
 export function AdminAI() {
-  const { data, error, isLoading } = useAdminAI();
+  const { data, error, isLoading, mutate } = useAdminAI();
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,13 +66,13 @@ export function AdminAI() {
           ))}
         </div>
       ) : (
-        <AIBody data={data} />
+        <AIBody data={data} onChange={() => mutate()} />
       )}
     </div>
   );
 }
 
-function AIBody({ data }: { data: NonNullable<ReturnType<typeof useAdminAI>["data"]> }) {
+function AIBody({ data, onChange }: { data: NonNullable<ReturnType<typeof useAdminAI>["data"]>; onChange: () => Promise<unknown> }) {
   const { limits, today, month } = data;
   const used = limits.dailyBudgetMicroUsd > 0 ? Math.min(100, Math.round((today.costMicroUsd / limits.dailyBudgetMicroUsd) * 100)) : 0;
 
@@ -119,10 +124,71 @@ function AIBody({ data }: { data: NonNullable<ReturnType<typeof useAdminAI>["dat
             <span className="shrink-0 text-right text-caption text-ink-muted tabular-nums">
               {usd(u.costMicroUsd)} · {num.format(u.calls)} pedidos
               {u.blocked > 0 ? ` · ${num.format(u.blocked)} frenados` : ""}
+              {u.offTopic > 0 ? ` · ${num.format(u.offTopic)} fuera de tema` : ""}
             </span>
           </MenuRow>
         ))}
       </MenuGroup>
+
+      <Suspended list={data.suspended} onChange={onChange} />
     </>
+  );
+}
+
+const dateTime = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+/**
+ * Accounts whose AI paused by itself (plan §8.6): 5 messages that were not
+ * expenses in a day, or a day's cost far above the rest. Reactivating lifts
+ * it now; it is audited.
+ */
+function Suspended({ list, onChange }: { list: NonNullable<ReturnType<typeof useAdminAI>["data"]>["suspended"]; onChange: () => Promise<unknown> }) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function resume(userId: string, email: string) {
+    const ok = await confirm({
+      title: "¿Reactivar la IA?",
+      description: `${email} vuelve a poder usar la IA ahora. Si repite lo mismo, se pausa otra vez.`,
+      confirmLabel: "Reactivar",
+    });
+    if (!ok) return;
+    setBusy(userId);
+    try {
+      await resumeUserAI(userId);
+      await onChange();
+      toast.success("IA reactivada");
+    } catch (err) {
+      toastError(err, "No se pudo reactivar.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <MenuGroup
+      title="IA pausada"
+      footer={
+        list.length === 0
+          ? "Ninguna cuenta tiene la IA pausada. Se pausa sola 24 horas con 5 mensajes que no son gastos en un día, o con un gasto del día 10 veces mayor al promedio."
+          : "Se pausa sola 24 horas. Mientras tanto la cuenta carga a mano."
+      }
+    >
+      {list.map((u) => (
+        <MenuRow key={u.userId} className="justify-between">
+          <span className="min-w-0">
+            <Link
+              href={`/admin/cuentas/${u.userId}`}
+              className="block truncate text-ink underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              {u.email}
+            </Link>
+            <span className="text-caption text-ink-muted">Hasta el {dateTime.format(new Date(u.until))}</span>
+          </span>
+          <Button type="button" variant="outline" size="sm" disabled={busy === u.userId} onClick={() => void resume(u.userId, u.email)}>
+            Reactivar
+          </Button>
+        </MenuRow>
+      ))}
+    </MenuGroup>
   );
 }

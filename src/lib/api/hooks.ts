@@ -564,7 +564,9 @@ export type AdminAI = {
   today: { costMicroUsd: number; calls: number; errors: number; blocked: number; avgLatencyMs: number };
   month: { costMicroUsd: number; calls: number };
   byTask: { task: string; calls: number; errors: number; blocked: number; costMicroUsd: number }[];
-  topUsers: { userId: string; email: string; calls: number; blocked: number; costMicroUsd: number }[];
+  topUsers: { userId: string; email: string; calls: number; blocked: number; offTopic: number; costMicroUsd: number }[];
+  /** Accounts whose AI is paused (plan §8.6), until when. */
+  suspended: { userId: string; email: string; until: string }[];
 };
 
 export type AdminAuditGroup = "" | "sessions" | "failed" | "account" | "household" | "admin";
@@ -646,4 +648,23 @@ export const NOTIFICATION_PREFERENCES_KEY = ["/me/notification-preferences", { h
 export function useNotificationPreferences() {
   const token = useAuthStore((s) => s.accessToken);
   return useSWR<NotificationPreferences>(token ? NOTIFICATION_PREFERENCES_KEY : null);
+}
+
+/** Whether the person's Telegram chat is linked (plan 3.6). */
+export type TelegramLink = { linked: boolean; linkedAt: string | null };
+
+export const TELEGRAM_LINK_KEY = ["/telegram/link", { householdScoped: false }] as const;
+
+/**
+ * The Telegram link status. The bot answers 503 while it is off on the
+ * server: no retries, and the card hides. `poll` checks every 3 s while the
+ * person is linking in Telegram.
+ */
+export function useTelegramLink({ poll = false, onSuccess }: { poll?: boolean; onSuccess?: (d: TelegramLink) => void } = {}) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useSWR<TelegramLink>(token ? TELEGRAM_LINK_KEY : null, {
+    shouldRetryOnError: false,
+    refreshInterval: poll ? 3_000 : 0,
+    onSuccess,
+  });
 }

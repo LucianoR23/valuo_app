@@ -1107,3 +1107,20 @@ export function exportIncomes(range: ExportRange): Promise<Blob> {
     accept: XLSX_TYPE,
   });
 }
+
+// Telegram bot (plan 3.6). Per person, so no household header.
+
+/** A one-time link (10 minutes) that opens the bot and links the chat. */
+export function createTelegramLink() {
+  return apiMutate<{ url: string; expiresAt: string }>({ method: "POST", path: "/telegram/link", householdScoped: false });
+}
+
+/** Unlinks the chat; the bot tells it. */
+export function unlinkTelegram() {
+  return apiMutate<void>({ method: "DELETE", path: "/telegram/link", householdScoped: false });
+}
+
+/** Lifts an automatic AI suspension (plan §8.6, superadmin). */
+export function resumeUserAI(userId: string) {
+  return apiMutate<void>({ method: "POST", path: `/admin/ai/users/${userId}/resume`, householdScoped: false });
+}

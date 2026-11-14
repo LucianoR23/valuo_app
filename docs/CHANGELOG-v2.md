@@ -4,6 +4,10 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 3.6 (app part): Telegram card and paused AI in the admin panel
+- Ajustes has a Telegram card (plan 3.6): "Conectar" shows the notice that messages, voice notes and photos go through Telegram's servers without end-to-end encryption (plan §13) and, once accepted, asks the API for a one-time link (10 minutes) and shows "Abrir Telegram". The card checks every 3 seconds until the chat is linked, then says "Conectado" with the date and offers "Desconectar" (confirmed). "Cancelar" drops an unused link. Without a verified email it says so. Hidden while the bot is off on the server (503).
+- Admin › IA lists the accounts with the AI paused by itself (plan §8.6) and until when, with "Reactivar" (confirmed, audited as "Superadmin reactivó la IA de una cuenta"), and shows off-topic messages per person.
+
 ### 3.5 parked: Gastos por mail removed from the app
 - Decided with the user (2026-11-14): setting up Gmail forwarding (desktop settings, confirmation code, filter) is too much for most people, and few banks mail every purchase. Sharing a screenshot (3.4 + 3.3) and the Telegram bot (3.6) cover those cases.
 - Reverts the app part of 3.5 (#87): the `/gastos-por-mail` screen, its Más item, the Inicio card, `?mail=` in Cargar gasto, the inbound hooks and mutations, and their baselines. The API and the Cloudflare Worker stay in `valuo_api`, off (no `INBOUND_*` set anywhere). Git history keeps this code to bring it back.

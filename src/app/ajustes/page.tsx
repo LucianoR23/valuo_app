@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { AppearanceCard } from "@/components/appearance-card";
 import { PersonalFxSource } from "@/components/personal-fx-source";
 import { ProfileConfig } from "@/components/profile-config";
+import { TelegramCard } from "@/components/telegram-card";
 import { Bell } from "lucide-react";
 import { InfoHelp, type InfoHelpContent } from "@/components/ui/info-help";
 import { MenuGroup, MenuItem } from "@/components/ui/menu-list";
@@ -14,6 +15,7 @@ const AJUSTES_HELP: InfoHelpContent = {
     "Elegí con qué dólar se pasan a pesos tus gastos e ingresos en otra moneda (MEP por defecto).",
     "Elegí el tema: por defecto sigue el de tu dispositivo.",
     "En Notificaciones elegís qué avisos te llegan y tu horario de silencio.",
+    "En Telegram conectás el bot para cargar gastos con un mensaje, una nota de voz o una foto.",
   ],
   consideraciones: [
     "Las tarjetas y medios de pago están en Tarjetas; el hogar y sus miembros, en Hogar.",
@@ -39,6 +41,7 @@ export default function Page() {
         <ProfileConfig />
         <PersonalFxSource />
         <AppearanceCard />
+        <TelegramCard />
         <MenuGroup title="Avisos">
           <MenuItem icon={Bell} label="Notificaciones" href="/ajustes/notificaciones" />
         </MenuGroup>

@@ -31,6 +31,7 @@ const LABELS: Record<string, string> = {
   "admin.household_purged": "Superadmin eliminó un hogar",
   "admin.waitlist_exported": "Superadmin exportó la lista de espera",
   "admin.waitlist_deleted": "Superadmin borró un email de la lista de espera",
+  "admin.ai_resumed": "Superadmin reactivó la IA de una cuenta",
 };
 
 const ALERT = new Set(["login.failed", "login.new_device", "account.deleted", "admin.household_purged"]);
