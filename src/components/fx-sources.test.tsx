@@ -33,6 +33,7 @@ function api(space = { ...personalSpace, fxSource: "bolsa" }) {
     http.get(`${API}/households/:id/members`, () =>
       HttpResponse.json([{ userId: "u1", email: "", firstName: "Ana", lastName: "T", role: "owner", joinedAt: "" }]),
     ),
+    http.post(`${API}/expenses/duplicates`, () => HttpResponse.json([])),
     http.post(`${API}/expenses`, () => HttpResponse.json({ expense: { id: "e1" }, installments: [], shares: [] }, { status: 201 })),
     http.post(`${API}/incomes`, () =>
       HttpResponse.json({ id: "i1", householdId: "p1", receivedBy: "u1", amount: 1, currency: "USD", amountBase: 1, baseCurrency: "ARS", source: "salary", receivedAt: "2026-11-10", createdAt: "" }, { status: 201 }),

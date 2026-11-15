@@ -4,6 +4,10 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 3.9 (app): duplicate detection
+- Guardar gasto first asks the API for expenses alike (`POST /expenses/duplicates`). If there are, a dialog lists them ("Café · $ 1.500 · 14/11 · Beto", the member's name only when someone else loaded it) with "No guardar" and "Guardar igual". Covers the sentence, voice and photo, which fill the same form. A failed check never blocks saving.
+- When it looks like a pending bill of a variable recurring expense, the dialog offers "Completar pendiente" (decided with the user): it confirms that bill with the amount typed, through the existing confirm, instead of creating another expense; "Guardar aparte" saves it as new.
+
 ### 3.8 (app): rules and autocomplete
 - New "Reglas" screen in Más › Tu plata (`/reglas`): the space's rules, with a switch between Mi plata and the Hogar. Each rule says what text the description must have, what it fills (category, payment method or both) and optional conditions (paid with a method, amount from and to). Create, edit and delete in a sheet, as Categorías.
 - Cargar gasto applies the space's rules as the person types (`src/lib/rules.ts`, the same matching as the API): they win over the history and the AI, fill the payment method only when none is chosen and only with the person's own active one, and the row says "Por tu regla". A rule with an amount waits for the amount. Picking a category or a method by hand keeps that choice.

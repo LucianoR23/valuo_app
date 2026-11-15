@@ -120,6 +120,32 @@ export function createExpense(input: ExpenseCreateInput, householdId?: string) {
   });
 }
 
+/** An expense of the space that may be the one being loaded (plan 3.9). */
+export type ExpenseDuplicate = {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  spentAt: string;
+  /** "draft": a pending bill of a variable recurring expense. */
+  status: "confirmed" | "draft";
+  createdBy: string;
+  createdByName: string;
+};
+
+/** Up to 3 possible duplicates, pending bills first. */
+export function findDuplicates(
+  input: { description: string; amount: number; currency: string; spentAt: string },
+  householdId?: string,
+) {
+  return apiMutate<ExpenseDuplicate[]>({
+    method: "POST",
+    path: "/expenses/duplicates",
+    body: input,
+    householdId,
+  });
+}
+
 export type CategorySuggestion = {
   categoryId: string | null;
   source: "rule" | "history" | "ai" | null;
@@ -249,11 +275,12 @@ export function moveExpense(id: string, householdId: string) {
 // confirmDraftExpense: el usuario carga el monto real de una factura variable
 // (luz/expensas/wifi) y el draft pasa a confirmed. El backend chequea el
 // threshold y dispara insight recurring_spike si supera.
-export function confirmDraftExpense(id: string, amount: number) {
+export function confirmDraftExpense(id: string, amount: number, householdId?: string) {
   return apiMutate<Expense>({
     method: "POST",
     path: `/expenses/${id}/confirm`,
     body: { amount },
+    householdId,
   });
 }
 
