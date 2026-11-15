@@ -20,6 +20,8 @@ vi.mock("@/lib/share-target", async (orig) => ({
   takeShare: take,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, back: vi.fn(), push: vi.fn() }) }));
+const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
+vi.mock("@/lib/toast", () => ({ toast: toastMock, toastError: vi.fn() }));
 
 const cash = {
   id: "pm1", ownerUserId: "u1", name: "Efectivo", kind: "cash",
@@ -625,5 +627,113 @@ describe("candidatesHint", () => {
     const { candidatesHint } = await import("./expense-form");
     expect(candidatesHint(["Visa Galicia", "Visa Santander"])).toBe("Tenés 2 Visa: elegí cuál");
     expect(candidatesHint(["Débito Galicia", "Visa Galicia"])).toBe("Coinciden 2 medios de pago: elegí cuál");
+  });
+});
+
+describe("ExpenseForm rules and autocomplete (plan 3.8)", () => {
+  const visa = {
+    id: "pm2", ownerUserId: "u1", name: "Visa", kind: "credit",
+    allowsInstallments: true, isActive: true, createdAt: "2026-01-01T00:00:00Z",
+  };
+  const rule = (over: Record<string, unknown>) => ({
+    id: crypto.randomUUID(), householdId: personalSpace.id, createdBy: "u1", matchText: "Carrefour",
+    paymentMethodId: null, minAmount: null, maxAmount: null, setCategoryId: null, setPaymentMethodId: null,
+    createdAt: "2026-11-14T12:00:00Z", updatedAt: "2026-11-14T12:00:00Z", ...over,
+  });
+  function withRules(rules: unknown[], descriptions: unknown[] = []) {
+    server.use(
+      http.get(`${API}/payment-methods`, () => HttpResponse.json([cash, visa])),
+      http.get(`${API}/categories`, () =>
+        HttpResponse.json([category("c-p", personalSpace.id, "Mis gustos"), category("c-s", personalSpace.id, "Súper")]),
+      ),
+      http.get(`${API}/rules`, () => HttpResponse.json(rules)),
+      http.get(`${API}/descriptions`, () => HttpResponse.json(descriptions)),
+    );
+  }
+
+  beforeEach(() => toastMock.mockClear());
+
+  it("a rule fills the category and the payment method as the person types", async () => {
+    api([personalSpace]);
+    withRules([
+      rule({ setCategoryId: "c-s", setPaymentMethodId: "pm2" }),
+      rule({ matchText: "Uber", minAmount: 20000, setCategoryId: "c-p" }),
+    ]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await userEvent.type(await screen.findByLabelText("Descripción"), "Carrefour Palermo");
+    await waitFor(() => expect(screen.getByLabelText("Categoría")).toHaveTextContent("Súper"));
+    expect(screen.getByLabelText("Pago")).toHaveTextContent("Visa");
+    expect(screen.getAllByText("Por tu regla")).toHaveLength(2);
+
+    await userEvent.type(screen.getByLabelText("Monto"), "1500");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar gasto" }));
+    await waitFor(() => expect(expensePost()).toBeDefined());
+    expect(JSON.parse(expensePost()!.body || "{}")).toMatchObject({ categoryId: "c-s", paymentMethodId: "pm2" });
+  });
+
+  it("a rule with an amount waits for the amount", async () => {
+    api([personalSpace]);
+    withRules([rule({ matchText: "Uber", minAmount: 20000, setCategoryId: "c-s" })]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await userEvent.type(await screen.findByLabelText("Descripción"), "Uber al centro");
+    await userEvent.type(screen.getByLabelText("Monto"), "1500");
+    expect(screen.queryByText("Por tu regla")).not.toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText("Monto"));
+    await userEvent.type(screen.getByLabelText("Monto"), "25000");
+    await waitFor(() => expect(screen.getByLabelText("Categoría")).toHaveTextContent("Súper"));
+  });
+
+  it("offers earlier descriptions while typing", async () => {
+    api([personalSpace]);
+    withRules([], [{ text: "Carrefour", uses: 4 }, { text: "Carnicería", uses: 2 }, { text: "Kiosco", uses: 9 }]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await userEvent.type(await screen.findByLabelText("Descripción"), "car");
+    expect(await screen.findByRole("option", { name: "Carrefour" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Carnicería" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Kiosco" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("option", { name: "Carrefour" }));
+    expect(screen.getByLabelText("Descripción")).toHaveValue("Carrefour");
+    await waitFor(() =>
+      expect(requests().some((r) => r.path === "/categories/suggest" && r.body?.includes("Carrefour"))).toBe(true),
+    );
+  });
+
+  it("after changing a suggested category, offers a rule", async () => {
+    api([personalSpace]);
+    withRules([]);
+    server.use(http.post(`${API}/categories/suggest`, () => HttpResponse.json({ categoryId: "c-p", source: "history" })));
+    server.use(http.post(`${API}/rules`, () => HttpResponse.json(rule({ setCategoryId: "c-s" }), { status: 201 })));
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await userEvent.type(await screen.findByLabelText("Descripción"), "Carrefour");
+    await userEvent.tab();
+    expect(await screen.findByText("Como la última vez")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("Categoría"));
+    await userEvent.click(await screen.findByRole("option", { name: "Súper" }));
+    await userEvent.type(screen.getByLabelText("Monto"), "1500");
+    await userEvent.click(screen.getByLabelText("Pago"));
+    await userEvent.click(await screen.findByRole("option", { name: /Efectivo/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Guardar gasto" }));
+
+    await waitFor(() => expect(toastMock).toHaveBeenCalled());
+    const [message, opts] = toastMock.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
+    expect(message).toBe("¿Siempre que diga «Carrefour», Súper?");
+    expect(opts.action.label).toBe("Crear regla");
+    opts.action.onClick();
+    await waitFor(() => expect(requests().some((r) => r.method === "POST" && r.path === "/rules")).toBe(true));
+    const post = requests().find((r) => r.method === "POST" && r.path === "/rules")!;
+    expect(post.headers.get("x-household-id")).toBe(personalSpace.id);
+    expect(JSON.parse(post.body || "{}")).toEqual({
+      matchText: "Carrefour", paymentMethodId: null, minAmount: null, maxAmount: null, setCategoryId: "c-s", setPaymentMethodId: null,
+    });
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Regla creada"));
+  });
+
+  it("does not offer a rule when the category was not changed", async () => {
+    api([personalSpace]);
+    withRules([]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await fillAndSubmit();
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(toastMock).not.toHaveBeenCalled();
   });
 });

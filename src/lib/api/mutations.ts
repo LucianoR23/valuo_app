@@ -32,6 +32,7 @@ import type {
   AdjustmentKind,
 } from "./schemas";
 import { userSchema } from "./schemas";
+import type { Rule } from "@/lib/rules";
 
 type MutateOpts = {
   method: NonNullable<ApiRequest["method"]>;
@@ -121,11 +122,11 @@ export function createExpense(input: ExpenseCreateInput, householdId?: string) {
 
 export type CategorySuggestion = {
   categoryId: string | null;
-  source: "history" | "ai" | null;
+  source: "rule" | "history" | "ai" | null;
 };
 
 /**
- * A category for a description (plan 8.4): from the space's history, or
+ * A category for a description (plan 8.4): from a rule of the space (3.8), its history, or
  * the AI when history has nothing. Nulls when nothing is confident.
  */
 export function suggestCategory(description: string, householdId?: string) {
@@ -152,7 +153,7 @@ export type ExpenseParse = {
   paymentCandidates: string[];
   shared: boolean;
   categoryId: string | null;
-  categorySource: "history" | "ai" | null;
+  categorySource: "rule" | "history" | "ai" | null;
   /** The sentence for the box: what a voice note said (plan 3.2) or what a photo shows (plan 3.3); null for typed text or when nothing was read. */
   transcript?: string | null;
 };
@@ -1123,4 +1124,29 @@ export function unlinkTelegram() {
 /** Lifts an automatic AI suspension (plan §8.6, superadmin). */
 export function resumeUserAI(userId: string) {
   return apiMutate<void>({ method: "POST", path: `/admin/ai/users/${userId}/resume`, householdScoped: false });
+}
+
+// --- Rules (plan 3.8) -----------------------------------------------------
+
+export type RuleInput = {
+  matchText: string;
+  paymentMethodId: string | null;
+  minAmount: number | null;
+  maxAmount: number | null;
+  setCategoryId: string | null;
+  setPaymentMethodId: string | null;
+};
+
+/** A new rule in `householdId`. */
+export function createRule(input: RuleInput, householdId: string) {
+  return apiMutate<Rule>({ method: "POST", path: "/rules", body: input, householdId });
+}
+
+/** Replaces a rule of `householdId`. */
+export function updateRule(id: string, input: RuleInput, householdId: string) {
+  return apiMutate<Rule>({ method: "PATCH", path: `/rules/${id}`, body: input, householdId });
+}
+
+export function deleteRule(id: string, householdId: string) {
+  return apiMutate<void>({ method: "DELETE", path: `/rules/${id}`, householdId });
 }

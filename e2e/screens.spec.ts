@@ -30,6 +30,7 @@ const SCREENS = [
   { name: "recurrentes", path: "/recurrentes" },
   { name: "objetivos", path: "/objetivos" },
   { name: "categorias", path: "/categorias" },
+  { name: "reglas", path: "/reglas" },
   { name: "reportes", path: "/reportes" },
   { name: "notificaciones", path: "/notificaciones" },
   { name: "ajustes", path: "/ajustes" },
