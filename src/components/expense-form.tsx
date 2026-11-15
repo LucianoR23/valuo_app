@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { mutate as swrMutate } from "swr";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,16 @@ import {
   useCreditCardPeriods,
   useExchangeRates,
   useHouseholdMembers,
+  useDescriptions,
+  useRules,
 } from "@/lib/api/hooks";
+import { matchRules, offerText } from "@/lib/rules";
+import { toast, toastError } from "@/lib/toast";
 import { selectSpace, useSpaces } from "@/lib/spaces";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import {
   createExpense,
+  createRule,
   parseExpense,
   parseExpenseAudio,
   parseExpenseReceipt,
@@ -198,7 +204,7 @@ export function ExpenseForm({
   const [suggestion, setSuggestion] = useState<{
     spaceId: string;
     categoryId: string;
-    source: "history" | "ai" | null;
+    source: "rule" | "history" | "ai" | null;
   } | null>(null);
   const lastAsked = useRef("");
   const [paymentMethodId, setPaymentMethodId] = useState<string>(
@@ -221,19 +227,44 @@ export function ExpenseForm({
     categories?.some((c) => c.id === suggestion.categoryId)
       ? suggestion
       : null;
-  const effectiveCategoryId = suggested ? suggested.categoryId : categoryId;
 
   const amount = Number(amountStr.replace(",", "."));
   const amountValid = amountStr !== "" && !isNaN(amount) && amount > 0;
 
-  const paymentMethod = paymentMethods?.find((p) => p.id === paymentMethodId);
+  // Rules of the space (plan 3.8), applied as the person types: they win
+  // over the history and the AI, and fill the payment method when none is
+  // chosen. Picking a category or a method by hand keeps that choice.
+  const { data: rules } = useRules(target?.id);
+  const { data: pastDescriptions } = useDescriptions(target?.id);
+  const ruleMatch = matchRules(
+    rules,
+    {
+      description,
+      paymentMethodId,
+      amount: amountValid ? amount : 0,
+      currency,
+    },
+    {
+      baseCurrency,
+      categoryIds: categories?.map((c) => c.id) ?? [],
+      myMethods: (paymentMethods ?? [])
+        .filter((p) => p.isActive)
+        .map((p) => p.id),
+    },
+  );
+  const ruleCategoryId = categoryPicked ? null : ruleMatch.categoryId;
+  const effectiveCategoryId =
+    ruleCategoryId ?? (suggested ? suggested.categoryId : categoryId);
+  const categoryFromRule = !!ruleCategoryId || suggested?.source === "rule";
+  const methodId = paymentMethodId || ruleMatch.paymentMethodId || "";
+  const methodFromRule = !paymentMethodId && !!ruleMatch.paymentMethodId;
+
+  const paymentMethod = paymentMethods?.find((p) => p.id === methodId);
   const isCredit = paymentMethod?.kind === "credit";
   const allowsInstallments = paymentMethod?.allowsInstallments ?? false;
 
-  const { data: creditCard } = useCreditCard(isCredit ? paymentMethodId : null);
-  const { data: periods } = useCreditCardPeriods(
-    isCredit ? paymentMethodId : null,
-  );
+  const { data: creditCard } = useCreditCard(isCredit ? methodId : null);
+  const { data: periods } = useCreditCardPeriods(isCredit ? methodId : null);
 
   // The dollar it converts with (plan 5.1): the space's unless picked here.
   const [pickedSource, setPickedSource] = useState("");
@@ -453,7 +484,7 @@ export function ExpenseForm({
     const e: Record<string, string> = {};
     if (!description.trim()) e.description = "Contá qué compraste";
     if (!amountValid) e.amount = "Ingresá un monto mayor a 0";
-    if (!paymentMethodId) e.paymentMethodId = "Elegí con qué pagaste";
+    if (!methodId) e.paymentMethodId = "Elegí con qué pagaste";
     if (!spentAt) e.spentAt = "Elegí la fecha";
     if (installments < 1) e.installments = "Mínimo 1";
     if (installments > 1 && !allowsInstallments)
@@ -472,7 +503,7 @@ export function ExpenseForm({
 
     const input: ExpenseCreateInput = {
       categoryId: effectiveCategoryId || null,
-      paymentMethodId,
+      paymentMethodId: methodId,
       amount,
       currency,
       description: description.trim(),
@@ -492,6 +523,18 @@ export function ExpenseForm({
     setSubmitting(true);
     try {
       const detail = await createExpense(input, target.id);
+      // The person changed the category the history or the AI suggested:
+      // offer a rule for next time (plan 3.8, decided with the user).
+      if (
+        categoryPicked &&
+        effectiveCategoryId &&
+        !ruleMatch.categoryId &&
+        suggestion?.spaceId === target.id &&
+        suggestion.source !== "rule" &&
+        suggestion.categoryId !== effectiveCategoryId
+      ) {
+        offerRule(target.id, input.description, effectiveCategoryId);
+      }
       // The detail page reads the current space: show the one it went to.
       if (target.id !== current?.id) selectSpace(target.id);
       swrMutate(
@@ -516,6 +559,40 @@ export function ExpenseForm({
       }
       setSubmitting(false);
     }
+  }
+
+  function offerRule(spaceId: string, desc: string, catId: string) {
+    const text = offerText(desc);
+    const name = categories?.find((c) => c.id === catId)?.name;
+    if (!text || !name) return;
+    toast(`¿Siempre que diga «${text}», ${name}?`, {
+      duration: 10_000,
+      action: {
+        label: "Crear regla",
+        onClick: () => {
+          createRule(
+            {
+              matchText: text,
+              paymentMethodId: null,
+              minAmount: null,
+              maxAmount: null,
+              setCategoryId: catId,
+              setPaymentMethodId: null,
+            },
+            spaceId,
+          )
+            .then(() => {
+              swrMutate(
+                (k) => Array.isArray(k) && k[0] === "/rules",
+                undefined,
+                { revalidate: true },
+              );
+              toast.success("Regla creada");
+            })
+            .catch((err) => toastError(err, "No pudimos crear la regla."));
+        },
+      },
+    });
   }
 
   return (
@@ -719,10 +796,14 @@ export function ExpenseForm({
             htmlFor="description"
             error={errors.description}
           >
-            <Input
+            <Autocomplete
               id="description"
+              items={pastDescriptions?.map((d) => d.text) ?? []}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onValueChange={(v, picked) => {
+                setDescription(v);
+                if (picked) void suggest(target?.id, false, v);
+              }}
               onBlur={() => void suggest(target?.id)}
               placeholder="Qué compraste"
               aria-invalid={!!errors.description}
@@ -734,11 +815,13 @@ export function ExpenseForm({
             label="Categoría"
             htmlFor="category"
             hint={
-              suggested
-                ? suggested.source === "ai"
-                  ? "Sugerida automáticamente"
-                  : "Como la última vez"
-                : undefined
+              categoryFromRule
+                ? "Por tu regla"
+                : suggested
+                  ? suggested.source === "ai"
+                    ? "Sugerida automáticamente"
+                    : "Como la última vez"
+                  : undefined
             }
           >
             <CategorySelect
@@ -761,13 +844,15 @@ export function ExpenseForm({
             htmlFor="paymentMethod"
             error={errors.paymentMethodId}
             hint={
-              candidateNames.length > 1 && !paymentMethodId
-                ? candidatesHint(candidateNames)
-                : undefined
+              methodFromRule
+                ? "Por tu regla"
+                : candidateNames.length > 1 && !methodId
+                  ? candidatesHint(candidateNames)
+                  : undefined
             }
           >
             <Select
-              value={paymentMethodId}
+              value={methodId}
               onValueChange={(v) => {
                 setPaymentMethodId(v ?? "");
                 setPaymentCandidates([]);

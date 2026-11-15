@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import type { Rule } from "@/lib/rules";
 import { useViewCurrency, viewQuery } from "@/stores/view-currency";
 import { useAuthStore } from "@/stores/auth";
 import { useHouseholdStore } from "@/stores/household";
@@ -666,5 +667,27 @@ export function useTelegramLink({ poll = false, onSuccess }: { poll?: boolean; o
     shouldRetryOnError: false,
     refreshInterval: poll ? 3_000 : 0,
     onSuccess,
+  });
+}
+
+// Rules and autocomplete (plan 3.8), per space.
+
+/** Key of a space's rules; mutations revalidate every space with "/rules". */
+export function rulesKey(householdId: string) {
+  return ["/rules", { householdId }] as const;
+}
+
+export function useRules(householdId?: string | null) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useSWR<Rule[]>(token && householdId ? rulesKey(householdId) : null);
+}
+
+/** A description of the space's last 12 months and how many times it was used. */
+export type PastDescription = { text: string; uses: number };
+
+export function useDescriptions(householdId?: string | null) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useSWR<PastDescription[]>(token && householdId ? (["/descriptions", { householdId }] as const) : null, {
+    revalidateOnFocus: false,
   });
 }

@@ -4,6 +4,12 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 3.8 (app): rules and autocomplete
+- New "Reglas" screen in Más › Tu plata (`/reglas`): the space's rules, with a switch between Mi plata and the Hogar. Each rule says what text the description must have, what it fills (category, payment method or both) and optional conditions (paid with a method, amount from and to). Create, edit and delete in a sheet, as Categorías.
+- Cargar gasto applies the space's rules as the person types (`src/lib/rules.ts`, the same matching as the API): they win over the history and the AI, fill the payment method only when none is chosen and only with the person's own active one, and the row says "Por tu regla". A rule with an amount waits for the amount. Picking a category or a method by hand keeps that choice.
+- After saving, if the person changed a category the history or the AI suggested, a toast offers "¿Siempre que diga «Carrefour», Súper?" with "Crear regla" (decided with the user).
+- The description offers the space's earlier descriptions while typing (`GET /descriptions`); picking one asks for its category at once. New `components/ui/autocomplete.tsx` on Base UI's Autocomplete (already installed, no new dependency); it only opens while some item fits, so an empty list never hides the page from screen readers.
+
 ### 3.6 (app part): Telegram card and paused AI in the admin panel
 - Ajustes has a Telegram card (plan 3.6): "Conectar" shows the notice that messages, voice notes and photos go through Telegram's servers without end-to-end encryption (plan §13) and, once accepted, asks the API for a one-time link (10 minutes) and shows "Abrir Telegram". The card checks every 3 seconds until the chat is linked, then says "Conectado" with the date and offers "Desconectar" (confirmed). "Cancelar" drops an unused link. Without a verified email it says so. Hidden while the bot is off on the server (503).
 - Admin › IA lists the accounts with the AI paused by itself (plan §8.6) and until when, with "Reactivar" (confirmed, audited as "Superadmin reactivó la IA de una cuenta"), and shows off-topic messages per person.
