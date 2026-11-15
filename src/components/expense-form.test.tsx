@@ -48,6 +48,7 @@ function api(households: unknown[]) {
         { userId: "u2", email: "beto@example.test", firstName: "Beto", lastName: "Test", role: "member", joinedAt: "2026-01-01T00:00:00Z" },
       ]),
     ),
+    http.post(`${API}/expenses/duplicates`, () => HttpResponse.json([])),
     http.post(`${API}/expenses`, () => HttpResponse.json({ expense: { id: "e1" }, installments: [], shares: [] }, { status: 201 })),
     http.post(`${API}/categories/suggest`, () => HttpResponse.json({ categoryId: null, source: null })),
     // Last: the first matching handler wins.
@@ -735,5 +736,88 @@ describe("ExpenseForm rules and autocomplete (plan 3.8)", () => {
     await fillAndSubmit();
     await waitFor(() => expect(replace).toHaveBeenCalled());
     expect(toastMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("ExpenseForm duplicate detection (plan 3.9)", () => {
+  const dup = (over: Record<string, unknown>) => ({
+    id: "d1", description: "Café", amount: 1500, currency: "ARS", spentAt: "2026-11-14",
+    status: "confirmed", createdBy: "u2", createdByName: "Beto", ...over,
+  });
+  const withDuplicates = (items: unknown[]) =>
+    server.use(http.post(`${API}/expenses/duplicates`, () => HttpResponse.json(items)));
+
+  it("checks before saving and saves when nothing is alike", async () => {
+    api([personalSpace]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    await waitFor(() => expect(expensePost()).toBeDefined());
+    const check = requests().find((r) => r.method === "POST" && r.path === "/expenses/duplicates")!;
+    expect(JSON.parse(check.body || "{}")).toMatchObject({ description: "Café", amount: 1500, currency: "ARS" });
+    expect(check.headers.get("x-household-id")).toBe(personalSpace.id);
+  });
+
+  it("asks before saving one already loaded, and keeps it unsaved on «No guardar»", async () => {
+    api([personalSpace]);
+    withDuplicates([dup({})]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    const dialog = await screen.findByRole("dialog", { name: "¿Ya lo cargaste?" });
+    expect(dialog).toHaveTextContent("Café · $ 1.500 · 14/11 · Beto");
+    await userEvent.click(screen.getByRole("button", { name: "No guardar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(expensePost()).toBeUndefined();
+    expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeEnabled();
+  });
+
+  it("saves anyway on «Guardar igual», without naming my own expense", async () => {
+    api([personalSpace]);
+    withDuplicates([dup({ createdBy: "u1", createdByName: "Ana" })]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).not.toHaveTextContent("Ana");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar igual" }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/movimientos/e1"));
+    expect(expensePost()).toBeDefined();
+  });
+
+  it("completes a pending bill instead of loading another", async () => {
+    api([personalSpace]);
+    withDuplicates([dup({ id: "draft1", description: "Luz", amount: 30000, status: "draft", spentAt: "2026-11-10" })]);
+    server.use(http.post(`${API}/expenses/draft1/confirm`, () => HttpResponse.json({ id: "draft1" })));
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    expect(await screen.findByRole("dialog", { name: "Tenés pendiente «Luz» del 10/11" })).toHaveTextContent(
+      "La completamos con $ 1.500",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Completar pendiente" }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/movimientos/draft1"));
+    const confirmReq = requests().find((r) => r.method === "POST" && r.path === "/expenses/draft1/confirm")!;
+    expect(JSON.parse(confirmReq.body || "{}")).toEqual({ amount: 1500 });
+    expect(expensePost()).toBeUndefined();
+  });
+
+  it("saves the pending-bill lookalike apart on «Guardar aparte»", async () => {
+    api([personalSpace]);
+    withDuplicates([dup({ id: "draft1", description: "Luz", status: "draft" })]);
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    await userEvent.click(await screen.findByRole("button", { name: "Guardar aparte" }));
+    await waitFor(() => expect(expensePost()).toBeDefined());
+  });
+
+  it("a failed check never blocks saving", async () => {
+    api([personalSpace]);
+    server.use(http.post(`${API}/expenses/duplicates`, () => HttpResponse.json({ error: "x" }, { status: 500 })));
+    render(<ExpenseForm />, { wrapper: WithSWR });
+    await screen.findByLabelText("Monto");
+    await fillAndSubmit();
+    await waitFor(() => expect(expensePost()).toBeDefined());
   });
 });

@@ -28,15 +28,20 @@ import { toast, toastError } from "@/lib/toast";
 import { selectSpace, useSpaces } from "@/lib/spaces";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import {
+  confirmDraftExpense,
   createExpense,
   createRule,
+  findDuplicates,
   parseExpense,
   parseExpenseAudio,
   parseExpenseReceipt,
   suggestCategory,
   type ExpenseCreateInput,
+  type ExpenseDuplicate,
   type ExpenseParse,
 } from "@/lib/api/mutations";
+import { DuplicateDialog, type DuplicateChoice } from "@/components/duplicate-dialog";
+import { useAuthStore } from "@/stores/auth";
 import {
   formatSecondsLeft,
   MAX_VOICE_SECONDS,
@@ -218,6 +223,14 @@ export function ExpenseForm({
   const [shareAmounts, setShareAmounts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // Plan 3.9: what may already be loaded, and the expense waiting on it.
+  const [duplicates, setDuplicates] = useState<{
+    items: ExpenseDuplicate[];
+    input: ExpenseCreateInput;
+    spaceId: string;
+  } | null>(null);
+  const [completing, setCompleting] = useState(false);
+  const me = useAuthStore((s) => s.user?.id);
 
   // The suggestion shows once its space's categories are loaded.
   const suggested =
@@ -521,35 +534,88 @@ export function ExpenseForm({
 
     if (!target) return;
     setSubmitting(true);
+    // Something alike already loaded? A failed check never blocks saving.
+    const found = await findDuplicates(
+      {
+        description: input.description,
+        amount: input.amount,
+        currency: input.currency,
+        spentAt: input.spentAt,
+      },
+      target.id,
+    ).catch(() => []);
+    if (found.length > 0) {
+      setDuplicates({ items: found, input, spaceId: target.id });
+      return;
+    }
+    await save(input, target.id);
+  }
+
+  async function chooseDuplicate(choice: DuplicateChoice) {
+    const pending = duplicates;
+    if (!pending) return;
+    if (choice === "cancel") {
+      setDuplicates(null);
+      setSubmitting(false);
+      return;
+    }
+    if (choice === "save") {
+      setDuplicates(null);
+      await save(pending.input, pending.spaceId);
+      return;
+    }
+    // Complete the pending bill with this amount (the existing confirm).
+    const draft = pending.items[0];
+    setCompleting(true);
     try {
-      const detail = await createExpense(input, target.id);
+      await confirmDraftExpense(draft.id, pending.input.amount, pending.spaceId);
+      setDuplicates(null);
+      done(pending.spaceId, draft.id);
+    } catch (err) {
+      setDuplicates(null);
+      setCompleting(false);
+      setErrors({
+        form: err instanceof ApiError ? err.message : "Error inesperado",
+      });
+      setSubmitting(false);
+    }
+  }
+
+  /** After saving: refresh what shows expenses and open the saved one. */
+  function done(spaceId: string, expenseId: string) {
+    // The detail page reads the current space: show the one it went to.
+    if (spaceId !== current?.id) selectSpace(spaceId);
+    swrMutate(
+      (k) =>
+        Array.isArray(k) &&
+        typeof k[0] === "string" &&
+        (k[0].startsWith("/expenses") ||
+          k[0].startsWith("/reports") ||
+          k[0].startsWith("/balances") ||
+          k[0].startsWith("/credit-cards")),
+      undefined,
+      { revalidate: true },
+    );
+    if (onCreated) onCreated(expenseId);
+    else router.replace(`/movimientos/${expenseId}`);
+  }
+
+  async function save(input: ExpenseCreateInput, spaceId: string) {
+    try {
+      const detail = await createExpense(input, spaceId);
       // The person changed the category the history or the AI suggested:
       // offer a rule for next time (plan 3.8, decided with the user).
       if (
         categoryPicked &&
         effectiveCategoryId &&
         !ruleMatch.categoryId &&
-        suggestion?.spaceId === target.id &&
+        suggestion?.spaceId === spaceId &&
         suggestion.source !== "rule" &&
         suggestion.categoryId !== effectiveCategoryId
       ) {
-        offerRule(target.id, input.description, effectiveCategoryId);
+        offerRule(spaceId, input.description, effectiveCategoryId);
       }
-      // The detail page reads the current space: show the one it went to.
-      if (target.id !== current?.id) selectSpace(target.id);
-      swrMutate(
-        (k) =>
-          Array.isArray(k) &&
-          typeof k[0] === "string" &&
-          (k[0].startsWith("/expenses") ||
-            k[0].startsWith("/reports") ||
-            k[0].startsWith("/balances") ||
-            k[0].startsWith("/credit-cards")),
-        undefined,
-        { revalidate: true },
-      );
-      if (onCreated) onCreated(detail.expense.id);
-      else router.replace(`/movimientos/${detail.expense.id}`);
+      done(spaceId, detail.expense.id);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.field) setErrors({ [err.field]: err.message });
@@ -597,6 +663,14 @@ export function ExpenseForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      <DuplicateDialog
+        duplicates={duplicates?.items ?? null}
+        amount={duplicates?.input.amount ?? 0}
+        currency={duplicates?.input.currency ?? baseCurrency}
+        me={me}
+        busy={completing}
+        onChoose={chooseDuplicate}
+      />
       {/* Contalo como te salga (plan 3.1), typed, dictated (3.2) or read
           from a photo (3.3). */}
       <div className="flex flex-col gap-2">
