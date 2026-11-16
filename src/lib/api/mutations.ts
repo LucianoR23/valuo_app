@@ -1136,6 +1136,23 @@ export function exportIncomes(range: ExportRange): Promise<Blob> {
   });
 }
 
+// AI assistant connections (plan 8.6). Per person, so no household header.
+
+/** Answers a pending request; the browser then goes to `redirectTo`. */
+export function decideConnectionRequest(id: string, approve: boolean) {
+  return apiMutate<{ redirectTo: string }>({
+    method: "POST",
+    path: `/connection-requests/${id}`,
+    body: { approve },
+    householdScoped: false,
+  });
+}
+
+/** Disconnects an assistant: its tokens stop working right away. */
+export function deleteConnection(id: string) {
+  return apiMutate<void>({ method: "DELETE", path: `/connections/${id}`, householdScoped: false });
+}
+
 // Telegram bot (plan 3.6). Per person, so no household header.
 
 /** A one-time link (10 minutes) that opens the bot and links the chat. */

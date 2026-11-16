@@ -19,10 +19,13 @@ const LABELS: Record<string, string> = {
   "household.joined": "Te uniste a un hogar",
   "household.member_removed": "Saliste de un hogar o te quitaron",
   "household.role_changed": "Cambió el dueño de un hogar",
+  "oauth.connected": "Conectaste un asistente de IA",
+  "oauth.disconnected": "Desconectaste un asistente de IA",
+  "oauth.reuse_revoked": "Desconectamos un asistente de IA por seguridad",
 };
 
 /** Events worth a second look are highlighted. */
-const ALERT = new Set(["login.failed", "login.new_device"]);
+const ALERT = new Set(["login.failed", "login.new_device", "oauth.reuse_revoked"]);
 
 const fmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",

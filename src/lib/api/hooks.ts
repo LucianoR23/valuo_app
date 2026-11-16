@@ -670,6 +670,42 @@ export function useTelegramLink({ poll = false, onSuccess }: { poll?: boolean; o
   });
 }
 
+// AI assistant connections (plan 8.6). Per person, so no household header.
+
+/** A pending authorization from an assistant, shown on /conectar. */
+export type ConnectionRequest = {
+  id: string;
+  clientName: string;
+  /** Where the browser goes back to, e.g. "claude.ai". */
+  redirectHost: string;
+  scopes: string[];
+  expiresAt: string;
+};
+
+export function useConnectionRequest(id: string | null) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useSWR<ConnectionRequest>(token && id ? ([`/connection-requests/${id}`, { householdScoped: false }] as const) : null, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+  });
+}
+
+/** A connected assistant. */
+export type Connection = {
+  id: string;
+  clientName: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+export const CONNECTIONS_KEY = ["/connections", { householdScoped: false }] as const;
+
+export function useConnections() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useSWR<{ items: Connection[] }>(token ? CONNECTIONS_KEY : null);
+}
+
 // Rules and autocomplete (plan 3.8), per space.
 
 /** Key of a space's rules; mutations revalidate every space with "/rules". */
