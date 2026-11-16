@@ -570,6 +570,31 @@ describe("ExpenseForm natural-language entry (plan 3.1)", () => {
       expect(receiptPosts()).toHaveLength(2);
     });
 
+    it("from the Foto de ticket shortcut, leads with a big photo button (plan 3.11)", async () => {
+      api([personalSpace]);
+      reads({ transcript: "Carrefour 15430,50", amount: 15430.5, description: "Carrefour" });
+      const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+      render(<ExpenseForm photoFirst />, { wrapper: WithSWR });
+      const big = await screen.findByRole("button", { name: "Sacar o elegir foto" });
+      await waitFor(() => expect(big).toBeEnabled());
+      await userEvent.click(big);
+      expect(click).toHaveBeenCalledTimes(1);
+      click.mockRestore();
+
+      // Once a photo is picked the button goes; the small camera stays.
+      await userEvent.upload(fileInput(), photo);
+      await waitFor(() => expect(screen.getByLabelText("Monto")).toHaveValue("15430,5"));
+      expect(screen.queryByRole("button", { name: "Sacar o elegir foto" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Leer foto de ticket o comprobante" })).toBeInTheDocument();
+    });
+
+    it("without the shortcut, has no big photo button", async () => {
+      api([personalSpace]);
+      render(<ExpenseForm />, { wrapper: WithSWR });
+      await screen.findByRole("button", { name: "Leer foto de ticket o comprobante" });
+      expect(screen.queryByRole("button", { name: "Sacar o elegir foto" })).not.toBeInTheDocument();
+    });
+
     describe("shared to the app (plan 3.4)", () => {
       beforeEach(() => {
         take.mockReset();

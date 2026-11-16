@@ -155,17 +155,21 @@ function writeSharedPref(v: boolean) {
  *
  * `onCreated` replaces the default jump to the new expense's detail
  * (onboarding's first expense, plan 1.3). `initial` fills the form in, as
- * "Cargar compra" does from the simulator (plan 4.8).
+ * "Cargar compra" does from the simulator (plan 4.8). `photoFirst` leads
+ * with a big photo button (the "Foto de ticket" app shortcut, plan 3.11).
  */
 export function ExpenseForm({
   onCreated,
   initial = {},
   fromShare = false,
+  photoFirst = false,
 }: {
   onCreated?: (expenseId: string) => void;
   initial?: ExpensePrefill;
   /** Opened from the Share Target (plan 3.4): read what was shared. */
   fromShare?: boolean;
+  /** Opened from the "Foto de ticket" shortcut (plan 3.11). */
+  photoFirst?: boolean;
 } = {}) {
   const router = useRouter();
   // "Compartido" off → Mi plata; on → the hogar with its split rules.
@@ -190,6 +194,9 @@ export function ExpenseForm({
   const mediaTicket = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const shareTaken = useRef(false);
+  // The browser opens the picker only after a tap, so the shortcut lands
+  // on a big button instead; gone once a photo is picked.
+  const [photoOffer, setPhotoOffer] = useState(photoFirst);
   // Methods that fit an ambiguous word ("visa"): listed first, none picked.
   const [paymentCandidates, setPaymentCandidates] = useState<string[]>([]);
 
@@ -410,6 +417,7 @@ export function ExpenseForm({
   }
 
   function readPhoto(file: File) {
+    setPhotoOffer(false);
     const id = target?.id;
     void readMedia("image", async () =>
       parseExpenseReceipt(await resizeImage(file), id),
@@ -671,6 +679,17 @@ export function ExpenseForm({
         busy={completing}
         onChoose={chooseDuplicate}
       />
+      {photoOffer && (
+        <Button
+          type="button"
+          size="lg"
+          disabled={!target}
+          onClick={() => fileInput.current?.click()}
+        >
+          <Camera aria-hidden strokeWidth={1.75} />
+          Sacar o elegir foto
+        </Button>
+      )}
       {/* Contalo como te salga (plan 3.1), typed, dictated (3.2) or read
           from a photo (3.3). */}
       <div className="flex flex-col gap-2">

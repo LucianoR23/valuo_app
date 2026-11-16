@@ -4,6 +4,10 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 3.11: Android shortcuts
+- The manifest has `shortcuts`, shown when the installed app's icon is long-pressed on Android: "Cargar gasto" (`/agregar`), "Foto de ticket" (`/agregar?foto=1`) and "Comprometido" (`/tarjetas`, decided with the user). Each has its own icon at 96 and 192 px (plus, camera, card on the round ink badge), made in the workspace brand kit (`brand/scripts/build_shortcuts.py`) and synced with `pnpm brand:sync`.
+- "Foto de ticket" opens Cargar gasto with a big "Sacar o elegir foto" button on top: browsers open the file picker only after a tap, so the page cannot open the camera by itself. The button goes once a photo is picked; the small camera next to the sentence stays. Cargar gasto's help mentions the shortcuts.
+
 ### 3.9 (app): duplicate detection
 - Guardar gasto first asks the API for expenses alike (`POST /expenses/duplicates`). If there are, a dialog lists them ("Café · $ 1.500 · 14/11 · Beto", the member's name only when someone else loaded it) with "No guardar" and "Guardar igual". Covers the sentence, voice and photo, which fill the same form. A failed check never blocks saving.
 - When it looks like a pending bill of a variable recurring expense, the dialog offers "Completar pendiente" (decided with the user): it confirms that bill with the amount typed, through the existing confirm, instead of creating another expense; "Guardar aparte" saves it as new.

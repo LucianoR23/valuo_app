@@ -10,6 +10,7 @@ const AGREGAR_HELP: InfoHelpContent = {
   acciones: [
     "Contalo en una frase en «Contalo como te salga» (por ejemplo «café 2500 visa galicia 3 cuotas ayer») y apretá Enter, tocá el micrófono y decilo (hasta 30 segundos), o tocá la cámara y elegí la foto de un ticket o una captura de una transferencia: completa los datos de abajo para que los revises.",
     "En Android, con la app instalada, también podés compartirle una captura o un texto desde otra app (por ejemplo desde Mercado Pago o la galería): se abre Cargar gasto y lo lee solo.",
+    "En Android, si mantenés apretado el ícono de la app, tenés atajos a «Cargar gasto», «Foto de ticket» y «Comprometido».",
     "Escribí el monto arriba y elegí la moneda (ARS, USD o EUR); si no es en pesos, ves cuánto es en pesos.",
     "Completá la descripción, la categoría (opcional), con qué pagaste y la fecha.",
     "Si el medio de pago admite cuotas, indicá cuántas; con tarjeta de crédito ves en qué resumen entra la primera.",
@@ -48,8 +49,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             </div>
           }
         />
-        {/* Opened from the Share Target (plan 3.4). */}
-        <ExpenseForm initial={initial} fromShare={params.recibido === "1"} />
+        {/* Opened from the Share Target (plan 3.4) or the "Foto de ticket"
+            shortcut (plan 3.11). */}
+        <ExpenseForm
+          initial={initial}
+          fromShare={params.recibido === "1"}
+          photoFirst={params.foto === "1"}
+        />
       </div>
     </AppShell>
   );
