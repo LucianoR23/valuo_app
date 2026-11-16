@@ -1,8 +1,8 @@
 {
-  "source": "a47975a8ab65820169657925ba495b0f63597e9e",
+  "source": "9021acf5ac2101450b998052b9b284d3a510a5a0",
   "files": {
     "brand/BRAND.md": "537065708051379f43caf1220fcc09c9bcf88ac68e65ce98ed2f5d10d46ffeb5",
-    "brand/README.md": "4c4254b136e1b243426f7393f369590926c1fec33a837bdeaa03dc2e21ac0808",
+    "brand/README.md": "e853ba777d874939cdc73e134076fcee594f611aa691fdbfdb869ee8387eac11",
     "brand/tokens.css": "b0ad27bf20eb27ceca16790a084d312affd0d5cea45f67ef534994afd0dbca38",
     "brand/tokens.json": "76292753095a91a5a5752f65bccd4a75a6fc8ffe2f8e60ed565daff8bfc635fd",
     "public/brand/icons/app-icon-amber.svg": "f1f856a2713e4d55584debb39b7cbcf615b201a3a8cd7ffd2775a373901c464a",
@@ -23,6 +23,12 @@
     "public/brand/png/icon-512.png": "4be71b11e97a1e604c8f21a591e69a14b078d4eb85335e1f7e6a098f7a426f94",
     "public/brand/png/icon-maskable-192.png": "728a9121e2675b03fc7284a2058a99a64051ed0b37f75146cb0cb91af41536e8",
     "public/brand/png/icon-maskable-512.png": "a8093734d313e558513f6a97d43e204ab8eb7b850a05c48bfb28ba66fe1c9691",
+    "public/brand/png/shortcut-add-192.png": "86013fad6782c7d861f94872e63ecc501911ca8096855f178bc04cd0b46ee0e9",
+    "public/brand/png/shortcut-add-96.png": "3ea9205ea91dfcbc1fe726beadc242bd07b484c1ab2cf3e9d3cdbeaaf57bbd42",
+    "public/brand/png/shortcut-committed-192.png": "1fcb5df40887366495161d9a55da22bb46221f78df6abccdd4747909b8f6d832",
+    "public/brand/png/shortcut-committed-96.png": "c7c5c4d63af38351f72b997a333bb8a338a2cbbfd98bbec538e7072059c58a9c",
+    "public/brand/png/shortcut-photo-192.png": "edbe351740b76cce47b65acb29296347dd1d35b8e3ab2fe1c5699e36c49ce8b3",
+    "public/brand/png/shortcut-photo-96.png": "4abd9a15e83b1ff3062315c9053c9729d8114b73a6dd80dc4f529014e2043d04",
     "public/brand/png/valuo-wordmark-dark.png": "a4f817265c8049d2eb6a15531f0a88b67e0403511126f58db6b4650a9a6add7f",
     "public/brand/png/valuo-wordmark-light.png": "4062fbef9397442abe314504d078dfbd42c5880704dcfaaf3f718afd8e78fab6",
     "src/app/apple-icon.png": "02517a40621b436be8cbb8ee2cb06cf7d0825a3ca1af7ab13c3140f75e4e0c09",

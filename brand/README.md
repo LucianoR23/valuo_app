@@ -17,7 +17,8 @@ Brand book (rules, voice, do/don't): [`BRAND.md`](BRAND.md) — in Spanish.
 | `icons/app-icon-amber.svg` | Amber variant | Marketing only, not the app icon. |
 | `icons/favicon.svg`, `png/favicon.ico` | Favicon | `<link rel="icon">` (SVG first, ICO fallback). |
 | `png/*` | Rendered PNGs (192, 512, maskable, 180 apple, 1024 master, wordmark previews) | PWA manifest, iOS, places that don't take SVG. |
-| `scripts/` | `build_logos.py` (needs fontTools + Manrope 800 woff2), `build_css.py` | Regenerate assets after a token or logo change. |
+| `png/shortcut-*-96.png` · `-192.png` | App shortcut icons: add, photo, committed (round ink badge, light glyph, amber accent) | PWA manifest `shortcuts` (Android long-press menu). Built by `scripts/build_shortcuts.py`. |
+| `scripts/` | `build_logos.py` (needs fontTools + Manrope 800 woff2), `build_css.py`, `build_shortcuts.py` (needs Pillow) | Regenerate assets after a token or logo change. |
 
 ## Rules
 - Clear space around the wordmark ≥ the height of the "a". Minimum width: 72 px (wordmark), 16 px (icon).
