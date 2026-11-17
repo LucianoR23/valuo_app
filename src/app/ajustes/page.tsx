@@ -3,7 +3,7 @@ import { AppearanceCard } from "@/components/appearance-card";
 import { PersonalFxSource } from "@/components/personal-fx-source";
 import { ProfileConfig } from "@/components/profile-config";
 import { TelegramCard } from "@/components/telegram-card";
-import { Bell } from "lucide-react";
+import { Bell, Bot } from "lucide-react";
 import { InfoHelp, type InfoHelpContent } from "@/components/ui/info-help";
 import { MenuGroup, MenuItem } from "@/components/ui/menu-list";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,6 +16,7 @@ const AJUSTES_HELP: InfoHelpContent = {
     "Elegí el tema: por defecto sigue el de tu dispositivo.",
     "En Notificaciones elegís qué avisos te llegan y tu horario de silencio.",
     "En Telegram conectás el bot para cargar gastos con un mensaje, una nota de voz o una foto.",
+    "En Asistentes de IA ves y desconectás el Claude o ChatGPT que conectaste para preguntarle por tu plata.",
   ],
   consideraciones: [
     "Las tarjetas y medios de pago están en Tarjetas; el hogar y sus miembros, en Hogar.",
@@ -44,6 +45,9 @@ export default function Page() {
         <TelegramCard />
         <MenuGroup title="Avisos">
           <MenuItem icon={Bell} label="Notificaciones" href="/ajustes/notificaciones" />
+        </MenuGroup>
+        <MenuGroup title="Conexiones">
+          <MenuItem icon={Bot} label="Asistentes de IA" href="/ajustes/conexiones" />
         </MenuGroup>
       </div>
     </AppShell>

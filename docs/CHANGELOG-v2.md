@@ -4,6 +4,15 @@ Entries reference item IDs from `AHORRA_V2_PLAN.md` (workspace repo).
 
 ## Unreleased
 
+### 8.6a (app): connect your own AI assistant
+- New `/conectar?pedido=<id>`, where the API's `/oauth/authorize` sends the browser:
+  - it shows which assistant asks, what it can see ("Ver tus gastos, ingresos, tarjetas, presupuestos y resúmenes, de Mi plata y del Hogar") and the site the browser returns to;
+  - it carries the notice that what the assistant reads goes to that company under its own terms;
+  - "Permitir" and "Cancelar" both send the browser back to the assistant;
+  - signed-out people log in first and come back to the request; an expired or used request explains what to do.
+- New `/ajustes/conexiones` ("Asistentes de IA", linked from Ajustes): the connected assistants with when they were connected and last used, each with "Desconectar" behind a confirm.
+- Recent activity names the new events: connected, disconnected, and disconnected for security (highlighted).
+
 ### 3.11: Android shortcuts
 - The manifest has `shortcuts`, shown when the installed app's icon is long-pressed on Android: "Cargar gasto" (`/agregar`), "Foto de ticket" (`/agregar?foto=1`) and "Comprometido" (`/tarjetas`, decided with the user). Each has its own icon at 96 and 192 px (plus, camera, card on the round ink badge), made in the workspace brand kit (`brand/scripts/build_shortcuts.py`) and synced with `pnpm brand:sync`.
 - "Foto de ticket" opens Cargar gasto with a big "Sacar o elegir foto" button on top: browsers open the file picker only after a tap, so the page cannot open the camera by itself. The button goes once a photo is picked; the small camera next to the sentence stays. Cargar gasto's help mentions the shortcuts.

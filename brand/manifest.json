@@ -1,8 +1,8 @@
 {
-  "source": "9021acf5ac2101450b998052b9b284d3a510a5a0",
+  "source": "a30edcf3cf54bcf46d5a05c05a0f00f1b651e33f",
   "files": {
     "brand/BRAND.md": "537065708051379f43caf1220fcc09c9bcf88ac68e65ce98ed2f5d10d46ffeb5",
-    "brand/README.md": "e853ba777d874939cdc73e134076fcee594f611aa691fdbfdb869ee8387eac11",
+    "brand/README.md": "269cdbd174e9bd08753fcbf194cd340998c6165dce18c95fe2dc2836c5fd0362",
     "brand/tokens.css": "b0ad27bf20eb27ceca16790a084d312affd0d5cea45f67ef534994afd0dbca38",
     "brand/tokens.json": "76292753095a91a5a5752f65bccd4a75a6fc8ffe2f8e60ed565daff8bfc635fd",
     "public/brand/icons/app-icon-amber.svg": "f1f856a2713e4d55584debb39b7cbcf615b201a3a8cd7ffd2775a373901c464a",
